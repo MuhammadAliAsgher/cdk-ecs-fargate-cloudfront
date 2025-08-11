@@ -5,6 +5,7 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 
 export class CdkNginxStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -20,13 +21,16 @@ export class CdkNginxStack extends cdk.Stack {
       vpc,
     });
 
-    // Create Load Balanced Fargate Service with nginx
+    // Reference ECR repository
+    const repo = ecr.Repository.fromRepositoryName(this, 'NginxRepo', 'nginx-repo');
+
+    // Create Load Balanced Fargate Service with ECR image
     const fargateService = new ecs_patterns.ApplicationLoadBalancedFargateService(this, 'MyFargateService', {
       cluster,
       cpu: 256,
       desiredCount: 1,
       taskImageOptions: {
-        image: ecs.ContainerImage.fromRegistry('nginx:latest'),
+        image: ecs.ContainerImage.fromEcrRepository(repo, 'latest'),
       },
       memoryLimitMiB: 512,
       publicLoadBalancer: true,
