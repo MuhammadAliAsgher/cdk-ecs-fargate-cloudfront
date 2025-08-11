@@ -1,0 +1,55 @@
+name: Deploy CDK Stack
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install dependencies
+      run: |
+        npm install --save-dev @types/jest
+        npm ci
+
+    - name: Build
+      run: npm run build
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+        role-session-name: GitHubActionsSession
+      env:
+        AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+    - name: Verify AWS Credentials
+      run: aws sts get-caller-identity
+
+    - name: Install AWS CDK
+      run: npm install -g aws-cdk@latest
+
+    - name: Synth Stack
+      env:
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+      run: cdk synth
+
+    - name: Deploy Stack
+      env:
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+      run: cdk deploy --all --require-approval never
